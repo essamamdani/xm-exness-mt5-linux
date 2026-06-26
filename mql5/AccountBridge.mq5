@@ -502,6 +502,39 @@ bool CancelOrder(ulong ticket, string &out_msg)
    return true;
 }
 
+bool ModifyPositionSLTP(ulong ticket, bool has_sl, double sl, bool has_tp, double tp, string &out_msg)
+{
+   if(!PositionSelectByTicket(ticket))
+   {
+      out_msg = "position not found";
+      return false;
+   }
+
+   string symbol = PositionGetString(POSITION_SYMBOL);
+   double new_sl = has_sl ? sl : PositionGetDouble(POSITION_SL);
+   double new_tp = has_tp ? tp : PositionGetDouble(POSITION_TP);
+
+   MqlTradeRequest req = {};
+   MqlTradeResult res = {};
+   req.action   = TRADE_ACTION_SLTP;
+   req.symbol   = symbol;
+   req.position = ticket;
+   req.sl       = new_sl;
+   req.tp       = new_tp;
+
+   if(!OrderSend(req, res))
+   {
+      out_msg = TradeRetcodeMsg(res);
+      return false;
+   }
+   if(res.retcode != TRADE_RETCODE_DONE && res.retcode != TRADE_RETCODE_PLACED)
+   {
+      out_msg = TradeRetcodeMsg(res);
+      return false;
+   }
+   return true;
+}
+
 //--- Trade command processing -------------------------------------
 void ProcessCommands()
 {
@@ -522,6 +555,8 @@ void ProcessCommandFile(string fname)
    double price = 0.0;
    double sl = 0.0;
    double tp = 0.0;
+   bool has_sl = false;
+   bool has_tp = false;
    int deviation = 10;
    ulong magic = 0;
    ulong ticket = 0;
@@ -538,8 +573,8 @@ void ProcessCommandFile(string fname)
       else if(key == "symbol") symbol = val;
       else if(key == "volume") volume = StringToDouble(val);
       else if(key == "price")  price = StringToDouble(val);
-      else if(key == "sl")     sl = StringToDouble(val);
-      else if(key == "tp")     tp = StringToDouble(val);
+      else if(key == "sl")     { sl = StringToDouble(val); has_sl = true; }
+      else if(key == "tp")     { tp = StringToDouble(val); has_tp = true; }
       else if(key == "deviation") deviation = (int)StringToInteger(val);
       else if(key == "comment")   comment = val;
       else if(key == "magic")     magic = (ulong)StringToInteger(val);
@@ -582,6 +617,11 @@ void ProcessCommandFile(string fname)
    else if(action == "cancel")
    {
       ok = CancelOrder(ticket, msg);
+      if(ok) result_ticket = ticket;
+   }
+   else if(action == "modify_sl")
+   {
+      ok = ModifyPositionSLTP(ticket, has_sl, sl, has_tp, tp, msg);
       if(ok) result_ticket = ticket;
    }
    else

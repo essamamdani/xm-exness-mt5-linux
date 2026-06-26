@@ -77,6 +77,11 @@ class OrderCreate(BaseModel):
     magic: int = Field(0, example=123456)
 
 
+class PositionModify(BaseModel):
+    sl: float | None = Field(None, example=4050.0)
+    tp: float | None = Field(None, example=4150.0)
+
+
 class Message(BaseModel):
     ok: bool
     message: str
@@ -297,6 +302,22 @@ def create_order(acc_id: int, payload: OrderCreate):
         raise HTTPException(status_code=504, detail="Timeout waiting for MT5 EA to process order")
     if not result.get("ok"):
         raise HTTPException(status_code=400, detail=result.get("message", "Order failed"))
+    return result
+
+
+@app.put("/api/accounts/{acc_id}/positions/{ticket}", tags=["Trading"], dependencies=[Depends(require_token)])
+def modify_position_sl_tp(acc_id: int, ticket: int, payload: PositionModify):
+    _assert_account_running(acc_id)
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="sl or tp must be provided")
+    command = {"action": "modify_sl", "ticket": ticket, **updates}
+    command_id = manager.send_trade_command(acc_id, command)
+    result = manager.wait_trade_result(acc_id, command_id, timeout=15.0)
+    if result is None:
+        raise HTTPException(status_code=504, detail="Timeout waiting for MT5 EA to process SL/TP modification")
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("message", "SL/TP modification failed"))
     return result
 
 
