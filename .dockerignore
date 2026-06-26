@@ -1,0 +1,8 @@
+.env
+.git
+.gitignore
+README.md
+static/openapi.json.bak
+docker-compose*.yml
+__pycache__/
+*.pyc

@@ -1,0 +1,7 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+flask==3.0.3
+flask-cors==4.0.1
+yfinance==0.2.40
+python-dotenv==1.0.1
