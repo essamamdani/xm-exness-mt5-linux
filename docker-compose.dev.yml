@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: essamamdani/xm-exness-mt5-linux:latest
+    image: ghcr.io/essamamdani/xm-exness-mt5-linux:latest
     container_name: xm-exness-mt5-api
     restart: unless-stopped
     env_file:

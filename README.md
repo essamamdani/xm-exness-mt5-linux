@@ -32,7 +32,13 @@ cp .env.example .env
 # Edit .env and set a strong API_TOKEN
 ```
 
-2. **Start the stack:**
+2. **Pull the pre-built image (optional — compose can also build it):**
+
+```bash
+docker pull ghcr.io/essamamdani/xm-exness-mt5-linux:latest
+```
+
+3. **Start the stack:**
 
 ```bash
 # API only (headless)
