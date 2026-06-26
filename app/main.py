@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,6 +56,25 @@ class AccountUpdate(BaseModel):
     password: str | None = None
     server: str | None = None
     symbol: str | None = None
+
+
+class OrderCreate(BaseModel):
+    action: Literal[
+        "market_buy",
+        "market_sell",
+        "buy_limit",
+        "sell_limit",
+        "buy_stop",
+        "sell_stop",
+    ] = Field(..., example="market_buy")
+    symbol: str = Field(..., example="GOLD")
+    volume: float = Field(..., gt=0, example=0.1)
+    price: float | None = Field(None, example=4080.0)
+    sl: float = Field(0.0, example=0.0)
+    tp: float = Field(0.0, example=0.0)
+    deviation: int = Field(10, example=10)
+    comment: str = Field("", example="API order")
+    magic: int = Field(0, example=123456)
 
 
 class Message(BaseModel):
@@ -180,6 +199,25 @@ def account_price(acc_id: int, symbol: str | None = None):
 
 
 @app.get("/api/accounts/{acc_id}/bars/{timeframe}", tags=["Data"], dependencies=[Depends(require_token)])
+def _get_bars(acc_id: int, symbol: str, timeframe: str, count: int):
+    # Prefer live MT5 bar data written by the EA.
+    mt5_key = f"bars_{timeframe.lower()}"
+    data = manager.get_account_data(acc_id)
+    mt5_bars = data.get(mt5_key)
+    if mt5_bars and isinstance(mt5_bars, dict) and mt5_bars.get("bars"):
+        bars = mt5_bars["bars"][-count:]
+        return {
+            "source": "mt5",
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "count": len(bars),
+            "bars": bars,
+        }
+    # Fall back to yfinance if MT5 has no bars for this timeframe.
+    return market_data.get_yfinance_bars(symbol, timeframe, count)
+
+
+@app.get("/api/accounts/{acc_id}/bars/{timeframe}", tags=["Data"], dependencies=[Depends(require_token)])
 def account_bars_timeframe(
     acc_id: int,
     timeframe: str,
@@ -190,7 +228,7 @@ def account_bars_timeframe(
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
     sym = (symbol or acc.get("symbol") or "XAUUSDm").upper()
-    return market_data.get_yfinance_bars(sym, timeframe, count)
+    return _get_bars(acc_id, sym, timeframe, count)
 
 
 @app.get("/api/accounts/{acc_id}/bars/{symbol}/{timeframe}", tags=["Data"], dependencies=[Depends(require_token)])
@@ -203,7 +241,7 @@ def account_bars_symbol_timeframe(
     acc = manager.get_account(acc_id)
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
-    return market_data.get_yfinance_bars(symbol.upper(), timeframe, count)
+    return _get_bars(acc_id, symbol.upper(), timeframe, count)
 
 
 @app.get("/api/accounts/{acc_id}/positions", tags=["Trading"], dependencies=[Depends(require_token)])
@@ -232,3 +270,48 @@ def account_history(acc_id: int, limit: int = Query(default=50, ge=1, le=500)):
     data = manager.get_account_data(acc_id)
     history = data.get("history", [])
     return history[:limit]
+
+
+# ----------------------------------------------------------------- Trading
+def _assert_account_running(acc_id: int):
+    acc = manager.get_account(acc_id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+    data = manager.get_account_data(acc_id)
+    account = data.get("account")
+    if not account:
+        raise HTTPException(status_code=503, detail="MT5 account data not available yet; wait for login")
+    return acc
+
+
+@app.post("/api/accounts/{acc_id}/orders", tags=["Trading"], dependencies=[Depends(require_token)], status_code=201)
+def create_order(acc_id: int, payload: OrderCreate):
+    _assert_account_running(acc_id)
+    if payload.action in ("buy_limit", "sell_limit", "buy_stop", "sell_stop") and payload.price is None:
+        raise HTTPException(status_code=400, detail="price is required for pending orders")
+
+    command = payload.model_dump()
+    command_id = manager.send_trade_command(acc_id, command)
+    result = manager.wait_trade_result(acc_id, command_id, timeout=15.0)
+    if result is None:
+        raise HTTPException(status_code=504, detail="Timeout waiting for MT5 EA to process order")
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Order failed"))
+    return result
+
+
+@app.delete("/api/accounts/{acc_id}/orders/{ticket}", tags=["Trading"], dependencies=[Depends(require_token)])
+def close_or_cancel_order(
+    acc_id: int,
+    ticket: int,
+    type: Literal["position", "pending"] = Query(..., description="Close a position or cancel a pending order"),
+):
+    _assert_account_running(acc_id)
+    action = "close" if type == "position" else "cancel"
+    command_id = manager.send_trade_command(acc_id, {"action": action, "ticket": ticket})
+    result = manager.wait_trade_result(acc_id, command_id, timeout=15.0)
+    if result is None:
+        raise HTTPException(status_code=504, detail="Timeout waiting for MT5 EA to process close/cancel")
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Close/cancel failed"))
+    return result

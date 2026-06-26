@@ -13,11 +13,20 @@ TIMEFRAME_MAP = {
     "15m": "15m",
     "30m": "30m",
     "1h": "1h",
-    "4h": "1h",   # yfinance has no 4h; we upsample from 1h later if needed
+    "4h": "1h",   # yfinance has no native 4h; we return 1h bars for now
     "1d": "1d",
     "1w": "1wk",
     "1mo": "1mo",
     "1y": "1mo",  # alias
+}
+
+# yfinance restricts how far back each intraday interval can go.
+PERIOD_MAP = {
+    "1m": "7d",
+    "5m": "60d",
+    "15m": "60d",
+    "30m": "60d",
+    "1h": "730d",
 }
 
 DEFAULT_COUNT = 100
@@ -54,10 +63,14 @@ def get_yfinance_bars(symbol: str, timeframe: str, count: int = DEFAULT_COUNT) -
     ticker = _normalize_symbol(symbol)
     max_bars = min(count, MAX_COUNT)
 
-    # yfinance limits: 1m data only available for last 7 days.
-    period = "7d" if tf == "1m" else "max"
+    # yfinance limits: intraday data only for limited look-back windows.
+    period = PERIOD_MAP.get(tf, "max")
 
-    hist = yf.Ticker(ticker).history(period=period, interval=tf)
+    try:
+        hist = yf.Ticker(ticker).history(period=period, interval=tf)
+    except Exception as e:
+        raise RuntimeError(f"yfinance request failed for {symbol} ({timeframe}): {e}")
+
     if hist is None or hist.empty:
         raise RuntimeError(f"No yfinance data for {symbol} ({timeframe}). The provider may be rate-limited or the symbol is unsupported.")
 

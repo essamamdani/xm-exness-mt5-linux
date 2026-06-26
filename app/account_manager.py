@@ -5,6 +5,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -395,3 +396,42 @@ class AccountManager:
             if data is not None:
                 result[fname.stem] = data
         return result
+
+    # ----------------------------------------------------------- Trade commands
+    _COMMAND_FILE = "command.txt"
+
+    def _command_path(self, acc_id: int) -> Path:
+        return self._files_dir(acc_id) / self._COMMAND_FILE
+
+    def _command_result_path(self, acc_id: int, command_id: str) -> Path:
+        return self._files_dir(acc_id) / f"result_{command_id}.json"
+
+    def send_trade_command(self, acc_id: int, payload: dict) -> str:
+        """Write a trade command file for the MT5 EA and return its id."""
+        files_dir = self._files_dir(acc_id)
+        files_dir.mkdir(parents=True, exist_ok=True)
+        command_id = uuid.uuid4().hex[:12]
+        payload = {"command_id": command_id, **payload}
+
+        # The EA expects a simple key=value text file, not JSON.
+        lines = []
+        for key in ("command_id", "action", "symbol", "volume", "price", "sl", "tp",
+                    "deviation", "comment", "magic", "ticket"):
+            val = payload.get(key)
+            if val is None:
+                val = 0 if key in ("price", "sl", "tp", "deviation", "magic", "ticket") else ""
+            lines.append(f"{key}={val}")
+
+        command_path = self._command_path(acc_id)
+        command_path.write_text("\n".join(lines))
+        return command_id
+
+    def wait_trade_result(self, acc_id: int, command_id: str, timeout: float = 10.0) -> dict | None:
+        """Poll for the result file written by the MT5 EA."""
+        result_path = self._command_result_path(acc_id, command_id)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if result_path.exists():
+                return self._read_json_file(result_path)
+            time.sleep(0.2)
+        return None
