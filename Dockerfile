@@ -36,6 +36,13 @@ RUN /home/headless/build_install.sh && rm -f /home/headless/build_install.sh
 
 USER root
 
+# Copy the pre-compiled AccountBridge EA into the primary generic terminal
+# so every cloned account gets it immediately (no compile-at-startup race).
+RUN mkdir -p "/home/headless/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts"
+COPY mql5/AccountBridge.ex5 mql5/AccountBridge.mq5 \
+    "/home/headless/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/"
+RUN chown -R headless:headless "/home/headless/.wine/drive_c/Program Files/MetaTrader 5/MQL5"
+
 WORKDIR /opt/mt5api
 
 # Python dependencies

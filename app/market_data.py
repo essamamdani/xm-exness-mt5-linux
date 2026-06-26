@@ -59,7 +59,7 @@ def get_yfinance_bars(symbol: str, timeframe: str, count: int = DEFAULT_COUNT) -
 
     hist = yf.Ticker(ticker).history(period=period, interval=tf)
     if hist is None or hist.empty:
-        raise RuntimeError(f"No yfinance data for {symbol} ({timeframe})")
+        raise RuntimeError(f"No yfinance data for {symbol} ({timeframe}). The provider may be rate-limited or the symbol is unsupported.")
 
     hist = hist.tail(max_bars).reset_index()
     if "Datetime" in hist.columns:

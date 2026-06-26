@@ -61,12 +61,14 @@ bash /opt/mt5api/install_terminals.sh || true
 
 # Copy enhanced AccountBridge EA into the generic terminal MQL5 tree
 # so every cloned account gets the latest version.
-EA_SRC="/opt/mt5api/mql5/AccountBridge.mq5"
-EA_DST="/home/headless/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/AccountBridge.mq5"
-if [ -f "$EA_SRC" ]; then
-    mkdir -p "$(dirname "$EA_DST")"
-    cp -f "$EA_SRC" "$EA_DST"
-fi
+EA_DST_DIR="/home/headless/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts"
+mkdir -p "$EA_DST_DIR"
+for ext in ex5 mq5; do
+    EA_SRC="/opt/mt5api/mql5/AccountBridge.$ext"
+    if [ -f "$EA_SRC" ]; then
+        cp -f "$EA_SRC" "$EA_DST_DIR/AccountBridge.$ext"
+    fi
+done
 
 # Ensure data directories exist
 mkdir -p "$DATA_DIR/accounts" "$DATA_DIR/files"

@@ -36,6 +36,11 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request, exc):
+    raise HTTPException(status_code=503, detail=str(exc))
+
+
 # ----------------------------------------------------------------- Schemas
 class AccountCreate(BaseModel):
     name: str = Field(..., example="XM Account")
