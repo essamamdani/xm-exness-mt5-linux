@@ -28,8 +28,13 @@ RUN mkdir -p /tmp/mt5-setup "/home/headless/.wine/drive_c/Program Files" && \
         "https://download.mql5.com/cdn/web/xm.global.limited/mt5/xmglobal5setup.exe" -O xmglobal5setup.exe && \
     chown -R headless:headless /tmp/mt5-setup
 
-COPY build_install.sh /tmp/build_install.sh
-RUN chmod +x /tmp/build_install.sh && runuser -u headless -- /tmp/build_install.sh && rm -f /tmp/build_install.sh
+COPY --chown=headless:headless build_install.sh /home/headless/build_install.sh
+RUN chmod +x /home/headless/build_install.sh
+
+USER headless
+RUN /home/headless/build_install.sh && rm -f /home/headless/build_install.sh
+
+USER root
 
 WORKDIR /opt/mt5api
 
