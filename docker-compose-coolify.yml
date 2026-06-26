@@ -1,8 +1,3 @@
-version: "3.8"
-
-# Coolify-ready Docker Compose for XM/Exness Ready Linux MetaTrader 5 API.
-# Docs: https://coolify.io/docs/knowledge-base/docker/compose
-
 services:
   mt5api:
     image: ghcr.io/essamamdani/xm-exness-mt5-linux:latest
