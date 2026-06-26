@@ -1,0 +1,42 @@
+version: "3.8"
+
+# Coolify-ready Docker Compose for XM/Exness Ready Linux MetaTrader 5 API.
+# Docs: https://coolify.io/docs/knowledge-base/docker/compose
+
+services:
+  mt5api:
+    image: ghcr.io/essamamdani/xm-exness-mt5-linux:latest
+    container_name: xm-exness-mt5-coolify
+    restart: unless-stopped
+    environment:
+      # Required: strong bearer token for /api/* routes
+      - API_TOKEN=${API_TOKEN:?API_TOKEN is required}
+      - API_PORT=${API_PORT:?8000}
+      - API_HOST=0.0.0.0
+      # Optional with defaults
+      - VNC_ENABLED=${VNC_ENABLED:-false}
+      - VNC_PASSWORD=${VNC_PASSWORD:-password}
+      - SCREEN_RESOLUTION=${SCREEN_RESOLUTION:-1024x768}
+      - DATA_DIR=/data
+      # Coolify magic variables (optional, for app use / webhooks)
+      - SERVICE_FQDN_MT5API
+      - SERVICE_URL_MT5API_8000
+    volumes:
+      - mt5_data:/data
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    # VNC/noVNC: uncomment the next two lines if you need GUI access on Coolify host
+    # ports:
+    #   - "${VNC_PORT:-5901}:5901"
+    #   - "${NOVNC_PORT:-6901}:6901"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  mt5_data:

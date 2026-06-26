@@ -42,20 +42,20 @@ docker pull ghcr.io/essamamdani/xm-exness-mt5-linux:latest
 
 ```bash
 # API only (headless)
-docker compose -f docker-compose.dev.yml up -d
+docker compose up -d
 
 # API + VNC/noVNC
-docker compose -f docker-compose.dev.yml -f docker-compose.vnc.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.vnc.yml up -d
 ```
 
-3. **OpenAPI docs:**
+4. **OpenAPI docs:**
 
 ```
 http://localhost:8000/docs
 http://localhost:8000/openapi.json
 ```
 
-4. **VNC (if enabled):**
+5. **VNC (if enabled):**
 
 ```
 Browser: http://localhost:6901/vnc.html
@@ -141,6 +141,19 @@ Always use the exact symbol name shown in your broker's Market Watch.
 ## VNC
 
 VNC runs inside the container regardless, but the ports are only published when you add `docker-compose.vnc.yml`. This keeps the default setup headless and secure.
+
+---
+
+## Coolify Deployment
+
+Use `docker-compose-coolify.yml` for [Coolify](https://coolify.io) deployments.
+
+1. In Coolify, create a new **Docker Compose** resource and point it to your repo.
+2. Select `docker-compose-coolify.yml` as the compose file.
+3. Set the required environment variables (`API_TOKEN`, etc.) in the Coolify UI.
+4. Assign a domain to the `mt5api` service. The magic variable `SERVICE_FQDN_MT5API` is exposed for convenience.
+
+The Coolify compose uses the pre-built image from GitHub Container Registry and persists account data in a named volume.
 
 ---
 
