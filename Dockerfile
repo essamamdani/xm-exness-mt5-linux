@@ -15,29 +15,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Pre-install broker-branded terminals so first container startup is fast.
-# The installers need an X display; Xvfb provides a virtual one during build.
-RUN mkdir -p /tmp/mt5-setup /home/headless/.wine/drive_c/Program\ Files && \
+# The installers must run as the headless user (same as runtime) with a
+# virtual X display.
+RUN mkdir -p /tmp/mt5-setup "/home/headless/.wine/drive_c/Program Files" && \
+    chown -R headless:headless /tmp/mt5-setup /home/headless/.wine && \
     cd /tmp/mt5-setup && \
     wget -q --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
         "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -O mt5setup.exe && \
     wget -q --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
         "https://download.mql5.com/cdn/web/exness.technologies.ltd/mt5/exness5setup.exe" -O exness5setup.exe && \
     wget -q --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-        "https://download.mql5.com/cdn/web/xm.global.limited/mt5/xmglobal5setup.exe" -O xmglobal5setup.exe
+        "https://download.mql5.com/cdn/web/xm.global.limited/mt5/xmglobal5setup.exe" -O xmglobal5setup.exe && \
+    chown -R headless:headless /tmp/mt5-setup
 
-RUN Xvfb :99 -screen 0 1024x768x24 -ac >/tmp/xvfb_build.log 2>&1 & \
-    export DISPLAY=:99 WINEDEBUG=-all WINEPREFIX=/home/headless/.wine && \
-    wineboot -i >/tmp/wineboot_build.log 2>&1 && \
-    sleep 5 && \
-    wine /tmp/mt5-setup/mt5setup.exe /auto >/tmp/mt5_install_build.log 2>&1 && \
-    wineserver -w && \
-    wine /tmp/mt5-setup/exness5setup.exe /auto >/tmp/exness_install_build.log 2>&1 && \
-    wineserver -w && \
-    wine /tmp/mt5-setup/xmglobal5setup.exe /auto >/tmp/xm_install_build.log 2>&1 && \
-    wineserver -w && \
-    rm -rf /tmp/mt5-setup && \
-    kill $(cat /tmp/.X99-lock 2>/dev/null) 2>/dev/null || true && \
-    chown -R headless:headless /home/headless/.wine
+COPY build_install.sh /tmp/build_install.sh
+RUN chmod +x /tmp/build_install.sh && runuser -u headless -- /tmp/build_install.sh && rm -f /tmp/build_install.sh
 
 WORKDIR /opt/mt5api
 
