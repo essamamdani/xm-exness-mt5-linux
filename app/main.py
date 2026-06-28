@@ -93,6 +93,16 @@ def _with_data(acc: dict) -> dict:
     return acc
 
 
+def _symbol_data(data: dict, symbol: str):
+    if symbol in data:
+        return data[symbol]
+    wanted = symbol.lower()
+    for key, value in data.items():
+        if key.lower() == wanted:
+            return value
+    return None
+
+
 # ----------------------------------------------------------------- Routes
 @app.get("/health", tags=["System"])
 def health():
@@ -191,19 +201,18 @@ def account_price(acc_id: int, symbol: str | None = None):
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    sym = (symbol or acc.get("symbol") or "XAUUSDm").upper()
+    sym = (symbol or acc.get("symbol") or "XAUUSDm").strip()
     data = manager.get_account_data(acc_id)
-    price = data.get(sym)
+    price = _symbol_data(data, sym)
     source = "mt5"
     if not price:
         price = market_data.get_price_from_yfinance(sym)
         source = "yfinance"
     if not price:
         raise HTTPException(status_code=404, detail=f"No price data for {sym}")
-    return {"account_id": acc_id, "symbol": sym, "source": source, "price": price}
+    return {"account_id": acc_id, "symbol": price.get("symbol", sym), "source": source, "price": price}
 
 
-@app.get("/api/accounts/{acc_id}/bars/{timeframe}", tags=["Data"], dependencies=[Depends(require_token)])
 def _get_bars(acc_id: int, symbol: str, timeframe: str, count: int):
     # Prefer live MT5 bar data written by the EA.
     mt5_key = f"bars_{timeframe.lower()}"
@@ -213,7 +222,7 @@ def _get_bars(acc_id: int, symbol: str, timeframe: str, count: int):
         bars = mt5_bars["bars"][-count:]
         return {
             "source": "mt5",
-            "symbol": symbol,
+            "symbol": mt5_bars.get("symbol", symbol),
             "timeframe": timeframe,
             "count": len(bars),
             "bars": bars,
@@ -232,7 +241,7 @@ def account_bars_timeframe(
     acc = manager.get_account(acc_id)
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
-    sym = (symbol or acc.get("symbol") or "XAUUSDm").upper()
+    sym = (symbol or acc.get("symbol") or "XAUUSDm").strip()
     return _get_bars(acc_id, sym, timeframe, count)
 
 
@@ -246,7 +255,7 @@ def account_bars_symbol_timeframe(
     acc = manager.get_account(acc_id)
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
-    return _get_bars(acc_id, symbol.upper(), timeframe, count)
+    return _get_bars(acc_id, symbol.strip(), timeframe, count)
 
 
 @app.get("/api/accounts/{acc_id}/positions", tags=["Trading"], dependencies=[Depends(require_token)])

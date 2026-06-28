@@ -766,6 +766,59 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Trading"
+        ],
+        "summary": "Create Order",
+        "operationId": "create_order_api_accounts__acc_id__orders_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "acc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Acc Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/accounts/{acc_id}/history": {
@@ -801,6 +854,139 @@
               "default": 50,
               "title": "Limit"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{acc_id}/positions/{ticket}": {
+      "put": {
+        "tags": [
+          "Trading"
+        ],
+        "summary": "Modify Position Sl Tp",
+        "operationId": "modify_position_sl_tp_api_accounts__acc_id__positions__ticket__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "acc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Acc Id"
+            }
+          },
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionModify"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{acc_id}/orders/{ticket}": {
+      "delete": {
+        "tags": [
+          "Trading"
+        ],
+        "summary": "Close Or Cancel Order",
+        "operationId": "close_or_cancel_order_api_accounts__acc_id__orders__ticket__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "acc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Acc Id"
+            }
+          },
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "position",
+                "pending"
+              ],
+              "type": "string",
+              "description": "Close a position or cancel a pending order",
+              "title": "Type"
+            },
+            "description": "Close a position or cancel a pending order"
           }
         ],
         "responses": {
@@ -939,6 +1125,113 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "OrderCreate": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "market_buy",
+              "market_sell",
+              "buy_limit",
+              "sell_limit",
+              "buy_stop",
+              "sell_stop"
+            ],
+            "title": "Action",
+            "example": "market_buy"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "example": "GOLD"
+          },
+          "volume": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Volume",
+            "example": 0.1
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price",
+            "example": 4080.0
+          },
+          "sl": {
+            "type": "number",
+            "title": "Sl",
+            "default": 0.0,
+            "example": 0.0
+          },
+          "tp": {
+            "type": "number",
+            "title": "Tp",
+            "default": 0.0,
+            "example": 0.0
+          },
+          "deviation": {
+            "type": "integer",
+            "title": "Deviation",
+            "default": 10,
+            "example": 10
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment",
+            "default": "",
+            "example": "API order"
+          },
+          "magic": {
+            "type": "integer",
+            "title": "Magic",
+            "default": 0,
+            "example": 123456
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "symbol",
+          "volume"
+        ],
+        "title": "OrderCreate"
+      },
+      "PositionModify": {
+        "properties": {
+          "sl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sl",
+            "example": 4050.0
+          },
+          "tp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tp",
+            "example": 4150.0
+          }
+        },
+        "type": "object",
+        "title": "PositionModify"
       },
       "ValidationError": {
         "properties": {

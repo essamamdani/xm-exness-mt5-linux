@@ -197,6 +197,8 @@ void WritePositions()
       double tp = PositionGetDouble(POSITION_TP);
       double profit = PositionGetDouble(POSITION_PROFIT);
       double swap = PositionGetDouble(POSITION_SWAP);
+      long magic = PositionGetInteger(POSITION_MAGIC);
+      string comment = PositionGetString(POSITION_COMMENT);
       datetime open_time = (datetime)PositionGetInteger(POSITION_TIME);
 
       if(i > 0) j += ",\n";
@@ -211,6 +213,8 @@ void WritePositions()
       j += "    \"tp\":             " + DoubleToString(tp, 6)                 + ",\n";
       j += "    \"profit\":         " + DoubleToString(profit, 2)             + ",\n";
       j += "    \"swap\":           " + DoubleToString(swap, 2)               + ",\n";
+      j += "    \"magic\":          " + IntegerToString(magic)                + ",\n";
+      j += "    \"comment\":        \"" + JsonString(comment)                  + "\",\n";
       j += "    \"open_time\":      \"" + TimeToString(open_time, TIME_DATE|TIME_SECONDS) + "\"\n";
       j += "  }";
    }
@@ -239,6 +243,8 @@ void WriteOrders()
       double price = OrderGetDouble(ORDER_PRICE_OPEN);
       double sl = OrderGetDouble(ORDER_SL);
       double tp = OrderGetDouble(ORDER_TP);
+      long magic = OrderGetInteger(ORDER_MAGIC);
+      string comment = OrderGetString(ORDER_COMMENT);
       datetime setup_time = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
 
       if(i > 0) j += ",\n";
@@ -250,6 +256,8 @@ void WriteOrders()
       j += "    \"price\":       " + DoubleToString(price, 6)     + ",\n";
       j += "    \"sl\":          " + DoubleToString(sl, 6)        + ",\n";
       j += "    \"tp\":          " + DoubleToString(tp, 6)        + ",\n";
+      j += "    \"magic\":       " + IntegerToString(magic)       + ",\n";
+      j += "    \"comment\":     \"" + JsonString(comment)         + "\",\n";
       j += "    \"setup_time\":  \"" + TimeToString(setup_time, TIME_DATE|TIME_SECONDS) + "\"\n";
       j += "  }";
    }
@@ -282,6 +290,10 @@ void WriteHistory()
       double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
       double swap = HistoryDealGetDouble(ticket, DEAL_SWAP);
       double commission = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      long order = HistoryDealGetInteger(ticket, DEAL_ORDER);
+      long position_id = HistoryDealGetInteger(ticket, DEAL_POSITION_ID);
+      long magic = HistoryDealGetInteger(ticket, DEAL_MAGIC);
+      string comment = HistoryDealGetString(ticket, DEAL_COMMENT);
       datetime close_time = (datetime)HistoryDealGetInteger(ticket, DEAL_TIME);
       long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
 
@@ -295,6 +307,10 @@ void WriteHistory()
       j += "    \"profit\":      " + DoubleToString(profit, 2)    + ",\n";
       j += "    \"swap\":        " + DoubleToString(swap, 2)      + ",\n";
       j += "    \"commission\":  " + DoubleToString(commission, 2)+ ",\n";
+      j += "    \"order\":       " + IntegerToString(order)       + ",\n";
+      j += "    \"position_id\": " + IntegerToString(position_id) + ",\n";
+      j += "    \"magic\":       " + IntegerToString(magic)       + ",\n";
+      j += "    \"comment\":     \"" + JsonString(comment)         + "\",\n";
       j += "    \"entry\":       \"" + EntryString(entry)         + "\",\n";
       j += "    \"close_time\":  \"" + TimeToString(close_time, TIME_DATE|TIME_SECONDS) + "\"\n";
       j += "  }";
@@ -308,7 +324,7 @@ void WriteHistory()
 //--- Helpers ------------------------------------------------------
 string OrderTypeString(long type)
 {
-   switch(type)
+   switch((int)type)
    {
       case ORDER_TYPE_BUY:            return "BUY";
       case ORDER_TYPE_SELL:           return "SELL";
